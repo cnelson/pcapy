@@ -56,6 +56,7 @@ static PyObject* p_datalink(register pcapobject* pp, PyObject* args);
 static PyObject* p_setnonblock(register pcapobject* pp, PyObject* args);
 static PyObject* p_getnonblock(register pcapobject* pp, PyObject* args);
 static PyObject* p_dump_open(register pcapobject* pp, PyObject* args);
+static PyObject* p_dump_fopen(register pcapobject* pp, PyObject* args);
 static PyObject* p_sendpacket(register pcapobject* pp, PyObject* args);
 
 static PyMethodDef p_methods[] = {
@@ -69,6 +70,7 @@ static PyMethodDef p_methods[] = {
   {"getnonblock", (PyCFunction) p_getnonblock, METH_VARARGS, "returns the current `non-blocking' state"},
   {"setnonblock", (PyCFunction) p_setnonblock, METH_VARARGS, "puts into `non-blocking' mode, or take it out, depending on the argument"},
   {"dump_open", (PyCFunction) p_dump_open, METH_VARARGS, "creates a dumper object"},
+  {"dump_fopen", (PyCFunction) p_dump_fopen, METH_VARARGS, "creates a dumper object via an existing fp"},
   {"sendpacket", (PyCFunction) p_sendpacket, METH_VARARGS, "sends a packet through the interface"},
   {NULL, NULL}	/* sentinel */
 };
@@ -401,6 +403,30 @@ p_dump_open(register pcapobject* pp, PyObject* args)
   return new_pcapdumper(ret);
 }
 
+static PyObject*
+p_dump_fopen(register pcapobject* pp, PyObject* args)
+{
+  int fd;
+  pcap_dumper_t *ret;
+
+  if (Py_TYPE(pp) != &Pcaptype)
+    {
+      PyErr_SetString(PcapError, "Not a pcap object");
+      return NULL;
+    }
+
+  if(!PyArg_ParseTuple(args,"i",&fd))
+    return NULL;
+
+  ret = pcap_dump_fopen(pp->pcap,  fdopen(fd, "wb"));
+
+  if (ret==NULL) {
+    PyErr_SetString(PcapError, pcap_geterr(pp->pcap));
+    return NULL;
+  }
+
+  return new_pcapdumper(ret);
+}
 
 static PyObject*
 p_loop(register pcapobject* pp, PyObject* args)
